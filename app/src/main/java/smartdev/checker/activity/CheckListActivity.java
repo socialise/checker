@@ -26,16 +26,23 @@ public class CheckListActivity extends AppCompatActivity {
     ViewGroup mScreen; //アイテムを追加していくレイアウト
     Button createItemButton;
     int categoryId = -1;
+	final static int COMMON = -1;
 
 	private ArrayList<CheckBox> checkBoxes = new ArrayList<>();
 
-    private static final String TAG = "CheckListActivity";
+    private static final String ACTIVITY_NAME = "CheckListActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_check_list);
 
+	    categoryId = getIntent().getIntExtra("category", -1);
+
+	    //region Log
+	    if(categoryId != -1) Log.v(ACTIVITY_NAME, "カテゴリIDは" + categoryId + "です。");
+	    else                 Log.e(ACTIVITY_NAME, "カテゴリIDは" + categoryId + "です。");
+	    //endregion
 	    mScreen = (ViewGroup) findViewById(R.id.listScreen);
 		createItemButton = (Button)findViewById(R.id.createItemButton);
 	    createItemButton.setOnClickListener(new View.OnClickListener() {
@@ -48,8 +55,6 @@ public class CheckListActivity extends AppCompatActivity {
 		    }
 	    });
 
-	    categoryId = getIntent().getIntExtra("category", -1);
-        Log.v(TAG, "categoryID:" + categoryId);
 		checkValue(categoryId);
     }
 
@@ -59,30 +64,23 @@ public class CheckListActivity extends AppCompatActivity {
 		makeList();
 	}
 
+	//共通カテゴリを含めたチェックリストの作成
 	private void makeList(){
-		//共通カテゴリを含めたチェックリストの作成
+		//前回のリストが出ていると邪魔なので、全削除
+		mScreen.removeAllViews();
+
 		MyHelper helper = new MyHelper(this);
 		SQLiteDatabase db = helper.getReadableDatabase();
-
-		Log.v("CheckListActivity ID", "" + categoryId);
-
-		//region Description
-		//String sql = "SELECT item.name, category._id FROM item.item"
-		//endregion
-
 
 		String str =
 				" SELECT DISTINCT item.name, item.category, item._id FROM item, category " +
 				" WHERE (category._id = item.category " +
 				"       AND category._id = " + categoryId + ") " +
 				"       OR item.category = 1 " +
-				" ORDER BY item._id";
-
-		Log.v("CheckListActivity クエリ", str);
+				" ORDER BY item.category DESC, item._id ASC";
 
 		Cursor cursor = db.rawQuery(str, null);
 
-		mScreen.removeAllViews();
 		int i = 0;
 		while (cursor.moveToNext()) {
 			String item = "";
@@ -91,7 +89,7 @@ public class CheckListActivity extends AppCompatActivity {
 			}
 			addList(cursor.getString(0) + item, mScreen, i++);
 
-			Log.v(cursor.getString(0), "" + cursor.getInt(1));
+			Log.v("リスト アイテム確認","名前:" +  cursor.getString(0) + ", item.category:" + cursor.getInt(1));
 		}
 		cursor.close();
 		db.close();
@@ -99,14 +97,12 @@ public class CheckListActivity extends AppCompatActivity {
 
     private void addList(String text, ViewGroup layout, int index){
 
-
-        //ll.setOrientation(LinearLayout.HORIZONTAL);
-
-        final CheckBox checkBox = new CheckBox(this);
+        CheckBox checkBox = new CheckBox(this);
 	    checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 		    @Override
 		    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 			    int count = 0;
+			    //全部チェックされたら、-月-日 完了と表示
 			    for (int i = 0; i < checkBoxes.size(); i++) {
 				    if (checkBoxes.get(i).isChecked()) {
 					    count++;
@@ -114,47 +110,58 @@ public class CheckListActivity extends AppCompatActivity {
 			    }
 
 			    if (count == checkBoxes.size()) {
-				    //Toast.makeText(CheckListActivity.this, "完了", Toast.LENGTH_LONG).show();
-
 				    for (int i = 0; i < checkBoxes.size(); i++) {
 					    checkBoxes.get(i).setChecked(false);
 				    }
-				    //mScreen.removeViewAt();
-				    TextView textView = new TextView(CheckListActivity.this);
 				    Calendar cal = Calendar.getInstance();
-				    textView.setText((cal.get(Calendar.MONTH) + 1) + "月" + cal.get(Calendar.DATE) + "日　完了");
+				    int month = cal.get(Calendar.MONTH) + 1;
+				    int date = cal.get(Calendar.DATE);
+
+				    TextView textView = new TextView(CheckListActivity.this);
+				    textView.setText(month + "月" + date + "日　完了");
 				    mScreen.addView(textView);
 			    }
-
-
 		    }
 	    });
 	    LinearLayout ll = new LinearLayout(this);
 	    ll.setOrientation(LinearLayout.HORIZONTAL);
-	    Button button = new Button(this);
-	    button.setTag(index);
-	    button.setVisibility(View.GONE);
-
-	    button.setOnClickListener(new View.OnClickListener() {
-		    @Override
-		    public void onClick(View v) {
-			    String sql = "DELETE FROM item WHERE " + v.getTag();
-
-
-		    }
-	    });
 
 	    checkBox.setTag(index);
 	    checkBoxes.add(checkBox);
+
         checkBox.setText(text);
         checkBox.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
 		        ViewGroup.LayoutParams.WRAP_CONTENT));
         checkBox.setTextSize(32);
-        ll.addView(checkBox);
 
+	    Button button = new Button(this);
+	    button.setTag(index);
+	    button.setVisibility(View.GONE);
+	    if(checkBox.getText().toString().contains("共通")){
+		    button.setTag(COMMON);
+	    }else {
+		    button.setOnClickListener(new View.OnClickListener() {
+			    @Override
+			    public void onClick(View v) {
+				    //TODO 削除ボタン
+				    String sql = "DELETE FROM item " +
+						    " WHERE item.category = " + categoryId +
+						    " AND item._id = " + v.getTag();
+
+				    MyHelper helper = new MyHelper(CheckListActivity.this);
+				    SQLiteDatabase db = helper.getWritableDatabase();
+				    db.execSQL(sql);
+			    }
+		    });
+	    }
+
+	    //子レイアウトに追加
+	    ll.addView(button);
+	    ll.addView(checkBox);
+
+	    //親レイアウトにllを追加
         layout.addView(ll);
     }
-
 
     private void checkValue(int val) {
 	    try {
@@ -164,12 +171,9 @@ public class CheckListActivity extends AppCompatActivity {
 		    }
 	    } catch (IncorrectValueException e) {
 		    e.printStackTrace();
-		    IncorrectValueException.showMessage(TAG);
-
+		    IncorrectValueException.showMessage(ACTIVITY_NAME);
 	    }catch (Exception e){
 		    e.printStackTrace();
 	    }
-
     }
-
 }
