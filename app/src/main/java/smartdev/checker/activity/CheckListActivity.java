@@ -3,6 +3,7 @@ package smartdev.checker.activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -52,6 +53,22 @@ public class CheckListActivity extends AppCompatActivity {
 			    intent.putExtra("categoryID", categoryId);
 			    intent.putExtra("mode", AddItemActivity.ITEM_MODE);
 			    startActivity(intent);
+		    }
+	    });
+
+	    Button deleteButton = (Button) findViewById(R.id.deleteButton);
+	    deleteButton.setOnClickListener(new View.OnClickListener() {
+		    @Override
+		    public void onClick(View v) {
+			    for (int i = 0; i < mScreen.getChildCount(); i++) {
+				    Button child = (Button) ((ViewGroup) mScreen.getChildAt(i)).getChildAt(0);
+				    child.setVisibility(View.VISIBLE);
+
+				    if (child.getTag().equals(COMMON)) {
+					    child.setVisibility(View.INVISIBLE);
+				    }
+			    }
+
 		    }
 	    });
 
@@ -136,6 +153,9 @@ public class CheckListActivity extends AppCompatActivity {
 
 	    Button button = new Button(this);
 	    button.setTag(index);
+	    button.setBackgroundColor(Color.RED);
+	    button.setTextColor(Color.WHITE);
+	    button.setText("-");
 	    button.setVisibility(View.GONE);
 	    if(checkBox.getText().toString().contains("共通")){
 		    button.setTag(COMMON);
