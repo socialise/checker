@@ -14,6 +14,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -30,6 +31,7 @@ public class CheckListActivity extends AppCompatActivity {
 	final static int COMMON = -1;
 
 	private ArrayList<CheckBox> checkBoxes = new ArrayList<>();
+	private ArrayList<Integer> itemIdList = new ArrayList<>();
 
     private static final String ACTIVITY_NAME = "CheckListActivity";
 
@@ -61,11 +63,17 @@ public class CheckListActivity extends AppCompatActivity {
 		    @Override
 		    public void onClick(View v) {
 			    for (int i = 0; i < mScreen.getChildCount(); i++) {
-				    Button child = (Button) ((ViewGroup) mScreen.getChildAt(i)).getChildAt(0);
-				    child.setVisibility(View.VISIBLE);
 
-				    if (child.getTag().equals(COMMON)) {
-					    child.setVisibility(View.INVISIBLE);
+				    Button child = (Button) ((ViewGroup) mScreen.getChildAt(i)).getChildAt(0);
+
+				    if (child.getVisibility() == View.GONE) {
+					    child.setVisibility(View.VISIBLE);
+					    if (child.getTag().equals(COMMON)) {
+						    child.setVisibility(View.INVISIBLE);
+					    }
+
+				    } else {
+					    child.setVisibility(View.GONE);
 				    }
 			    }
 
@@ -78,11 +86,6 @@ public class CheckListActivity extends AppCompatActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		makeList();
-	}
-
-	//共通カテゴリを含めたチェックリストの作成
-	private void makeList(){
 		//前回のリストが出ていると邪魔なので、全削除
 		mScreen.removeAllViews();
 
@@ -91,22 +94,26 @@ public class CheckListActivity extends AppCompatActivity {
 
 		String str =
 				" SELECT DISTINCT item.name, item.category, item._id FROM item, category " +
-				" WHERE (category._id = item.category " +
-				"       AND category._id = " + categoryId + ") " +
-				"       OR item.category = 1 " +
-				" ORDER BY item.category DESC, item._id ASC";
+						" WHERE (category._id = item.category " +
+						"       AND category._id = " + categoryId + ") " +
+						"       OR item.category = 1 " +
+						" ORDER BY item.category DESC, item._id ASC";
 
 		Cursor cursor = db.rawQuery(str, null);
 
 		int i = 0;
 		while (cursor.moveToNext()) {
 			String item = "";
-			if (cursor.getInt(1) == 1){
+			if (cursor.getInt(1) == 1) {
 				item = " 共通";
 			}
+			itemIdList.add(cursor.getInt(2));
 			addList(cursor.getString(0) + item, mScreen, i++);
 
-			Log.v("リスト アイテム確認","名前:" +  cursor.getString(0) + ", item.category:" + cursor.getInt(1));
+			Log.d("リスト アイテム確認",
+					"名前:" + cursor.getString(0) +
+							", item.category:" + cursor.getInt(1) +
+							", item._id:" + cursor.getInt(2));
 		}
 		cursor.close();
 		db.close();
@@ -168,9 +175,12 @@ public class CheckListActivity extends AppCompatActivity {
 						    " WHERE item.category = " + categoryId +
 						    " AND item._id = " + v.getTag();
 
+				    Log.v("sql確認", sql);
+
 				    MyHelper helper = new MyHelper(CheckListActivity.this);
 				    SQLiteDatabase db = helper.getWritableDatabase();
 				    db.execSQL(sql);
+				    Toast.makeText(CheckListActivity.this, "削除", Toast.LENGTH_LONG).show();
 			    }
 		    });
 	    }
