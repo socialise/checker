@@ -1,5 +1,6 @@
 package smartdev.checker.activity;
 
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -8,15 +9,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import smartdev.checker.ContextTemplate;
 import smartdev.checker.MyHelper;
 import smartdev.checker.R;
 
-public class AddItemActivity extends AppCompatActivity {
+public class AddItemActivity extends AppCompatActivity implements ContextTemplate {
 
 	static final int ITEM_MODE = 0;
 	static final int CATEGORY_MODE = 1;
 
-	private final String TAG = "AddItemActivity";
 	private Button button;
 	private EditText editText;
 	private SQLiteDatabase db;
@@ -53,4 +54,15 @@ public class AddItemActivity extends AppCompatActivity {
 		});
 	}
 
+	//region implementing ConvenienceTemplate
+	@Override
+	public Context getContext() {
+		return this;
+	}
+
+	@Override
+	public String getActivityName() {
+		return "AddItemActivity";
+	}
+	//endregion
 }
